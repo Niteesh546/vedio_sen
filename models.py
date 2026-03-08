@@ -277,7 +277,7 @@ if __name__ == "__main__":
         emotional_probs = torch.softmax(outputs['emotions'], dim=1)[0]
         sentiment_probs = torch.softmax(outputs['sentiments'], dim=1)[0]
         
-    emotion_list = ['anger', 'disgust', 'fear', 'joy', 'neutral', 'sadness', 'surprise']
+    emotion_list = ['anger', 'disgust', 'sadness', 'joy', 'neutral', 'surprise', 'fear']
     sentiment_list = ['negative', 'neutral', 'positive']
     
     print("\n--- Emotion Probabilities ---")

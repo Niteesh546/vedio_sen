@@ -71,7 +71,7 @@ class MELDDataset(Dataset):
                     '-ar', '16000',
                     '-ac', '1',
                     audio_path
-                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
             # 2. LOAD AND PROCESS (Moved out of except block)
             waveform, sample_rate = torchaudio.load(audio_path) 
@@ -108,9 +108,13 @@ class MELDDataset(Dataset):
     def __len__(self):
         return len(self.data)
         
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, _depth=0):
         if isinstance(idx, torch.Tensor):
             idx = idx.item()
+        
+        # Guard against infinite recursion when all video files are missing
+        if _depth >= len(self):
+            raise RuntimeError("No valid samples found in the dataset. Check that video files exist.")
         
         row = self.data.iloc[idx]
         try:
@@ -118,7 +122,7 @@ class MELDDataset(Dataset):
             path = os.path.join(self.video_dir, video_filename)
             
             if not os.path.exists(path):
-                return self.__getitem__((idx + 1) % len(self))
+                return self.__getitem__((idx + 1) % len(self), _depth=_depth + 1)
             
             text_input = self.tokenizer(
                 str(row['Utterance']),
@@ -146,7 +150,7 @@ class MELDDataset(Dataset):
             }
         except Exception as e:
             print(f"Error processing sample {idx}: {str(e)}")
-            return self.__getitem__((idx + 1) % len(self))
+            return self.__getitem__((idx + 1) % len(self), _depth=_depth + 1)
 
 def collate_fn(batch):
     batch = list(filter(None, batch))
