@@ -1,0 +1,19 @@
+# Environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Data (Git is not for large datasets)
+dataset/
+MELD.Raw/
+*.mp4
+*.wav
+*.tar.gz
+
+# Logs and Checkpoints
+runs/
+*.pth
