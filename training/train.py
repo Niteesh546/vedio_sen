@@ -3,6 +3,7 @@ import argparse
 import torchaudio
 import torch
 import tqdm
+import pathlib
 import json
 
 from meld_dataset import prepare_dataloader
@@ -56,9 +57,9 @@ def main():
     )
     
     print(f"Training CSV path: {os.path.join(args.train_dir, 'train_sent_emo.csv')}")
-print(f"Training video directory: {os.path.join(args.train_dir, 'train_splits')}")
+    print(f"Training video directory: {os.path.join(args.train_dir, 'train_splits')}")
     
-    model = MultimodalSentimentModel{}.to(device)
+    model = MultimodalSentimentModel().to(device)
     trainer= MultimodalTrainer(model,train_loader,val_loader)
     best_val_loss=float('inf')
     
@@ -67,7 +68,7 @@ print(f"Training video directory: {os.path.join(args.train_dir, 'train_splits')}
         "val_losses":[],
         "epochs":[]
     }
-    for epoch in tqdm(range(args.epochs,desc="Epochs")):
+    for epoch in tqdm.tqdm(range(args.epochs), desc="Epochs"):
         train_loss =trainer.train_epoch()
         
         val_loss,val_metrics = trainer.evaluate(val_loader)
@@ -84,7 +85,7 @@ print(f"Training video directory: {os.path.join(args.train_dir, 'train_splits')}
                 {"Name": "train:loss", "Value": train_loss["total"]},
                 {"Name": "validation:loss", "Value": val_loss["total"]},
                 {"Name": "validation:emotion_precision", "Value": val_metrics["emotion_precision"]},
-                {"Name": "validation:emotion_accuracy", "Value": val_metrics["emotion_accuracy"]},
+                {"Name": "validation:emotion_accuracy", "Value": val_metrics["emotional_accuracy"]},
                 {"Name": "validation:sentiment_precision", "Value": val_metrics["sentiment_precision"]},
                 {"Name": "validation:sentiment_accuracy", "Value": val_metrics["sentiment_accuracy"]}
             ]
@@ -94,13 +95,23 @@ print(f"Training video directory: {os.path.join(args.train_dir, 'train_splits')}
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats()
             memory_used = torch.cuda.memory_allocated(device) / (1024 ** 3)
-            print(f"Initial GPU Memory Used: {memory_used:.2f} GB")
+            print(f"GPU Memory Used: {memory_used:.2f} GB")
             
-        
-        
+        # Save best model
+        if val_loss['total'] < best_val_loss:
+            best_val_loss = val_loss['total']
+            model_path = os.path.join(args.model_dir, 'model.pth')
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'emotion_classes': ['anger', 'disgust', 'sadness', 'joy', 'neutral', 'surprise', 'fear'],
+                'sentiment_classes': ['negative', 'neutral', 'positive'],
+                'epoch': epoch,
+                'val_loss': best_val_loss
+            }, model_path)
+            print(f"Saved best model (val_loss={best_val_loss:.4f}) to {model_path}")
     
+    print("\nTraining complete!")
+    print(f"Best validation loss: {best_val_loss:.4f}")
 
 if __name__ == "__main__":
     main()
-    
-   
